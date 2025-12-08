@@ -1,0 +1,8 @@
+- id: ensure-uv
+  name: Ensure uv is installed
+  description: Install uv package manager if not present
+  entry: ensure-uv
+  language: python
+  always_run: true
+  pass_filenames: false
+  stages: [pre-commit, pre-push, manual]
