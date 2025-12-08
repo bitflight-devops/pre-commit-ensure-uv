@@ -3,6 +3,8 @@
 Based on <https://github.com/maresb/hatch-vcs-footgun-example>.
 """
 
+from __future__ import annotations
+
 import pathlib
 
 
