@@ -1,6 +1,3 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
 
 [project]
 name = "pre-commit-ensure-uv"
@@ -10,25 +7,238 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.9"
 authors = [{ name = "Jamie Nelson" }]
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Environment :: Console",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Topic :: Software Development :: Quality Assurance",
-]
-keywords = ["pre-commit", "uv", "astral"]
+classifiers = ["Environment :: Console", "Intended Audience :: Developers", "License :: OSI Approved :: MIT License", "Operating System :: OS Independent", "Programming Language :: Python :: 3", "Programming Language :: Python :: 3.9", "Programming Language :: Python :: 3.10", "Programming Language :: Python :: 3.11", "Programming Language :: Python :: 3.12", "Programming Language :: Python :: 3.13", "Programming Language :: Python :: 3.14", "Topic :: Software Development :: Quality Assurance"]
+keywords = ["prek", "pre-commit", "uv", "astral"]
 
 [project.scripts]
-ensure-uv = "pre_commit_ensure_uv:main"
+ensure-uv = "ensure_uv:main"
 
 [project.urls]
-Homepage = "https://github.com/Jamie-BitFlight/pre-commit-ensure-uv"
-Repository = "https://github.com/Jamie-BitFlight/pre-commit-ensure-uv"
+Homepage = "https://github.com/bitflight-devops/pre-commit-ensure-uv"
+Repository = "https://github.com/bitflight-devops/pre-commit-ensure-uv"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+packages = ["packages/ensure_uv"]
+
+[tool.hatch.version]
+source = "vcs"
+
+
+[tool.pylint."MESSAGES CONTROL"]
+max-line-length = 120
+disable = [
+    "invalid-name",
+    "line-too-long",
+    "logging-fstring-interpolation",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "missing-module-docstring",
+    "unused-variable",
+    "wrong-import-position",
+]
+
+[tool.ruff]
+target-version = "py311"
+fix = true
+unsafe-fixes = true
+src = ["packages", "scripts", "tests", "typings", ".gitlab", ".github"]
+
+[tool.ruff.format]
+docstring-code-format = true
+quote-style = "double"
+line-ending = "lf"
+skip-magic-trailing-comma = true
+preview = true
+
+[tool.ruff.lint]
+preview = true
+extend-select = [
+    "A",     # see: https://docs.astral.sh/ruff/rules/#flake8-builtins-a
+    "ANN",   # see: https://docs.astral.sh/ruff/rules/#flake8-annotations-ann
+    "ASYNC", # see: https://docs.astral.sh/ruff/rules/#flake8-async-async
+    "B",     # see: https://docs.astral.sh/ruff/rules/#flake8-bugbear-b
+    "BLE",   # see: https://docs.astral.sh/ruff/rules/#flake8-blind-except-ble
+    "C4",    # see: https://docs.astral.sh/ruff/rules/#flake8-comprehensions-c4
+    "C90",   # see: https://docs.astral.sh/ruff/rules/#mccabe-c90
+    "D",     # see: https://docs.astral.sh/ruff/rules/#pydocstyle-d
+    "DOC",   # see: https://docs.astral.sh/ruff/rules/#pydoclint-doc
+    "E",     # see: https://docs.astral.sh/ruff/rules/#error-e
+    "EXE",   # see: https://docs.astral.sh/ruff/rules/#flake8-executable-exe
+    "F",     # see: https://docs.astral.sh/ruff/rules/#pyflakes-f
+    "FA",    # see: https://docs.astral.sh/ruff/rules/#flake8-annotations-fa
+    "FAST",  # see: https://docs.astral.sh/ruff/rules/#fastapi-fast
+    "FLY",   # see: https://docs.astral.sh/ruff/rules/#flynt-fly
+    "FURB",  # see: https://docs.astral.sh/ruff/rules/#refurb-furb
+    "G201",  # see: https://docs.astral.sh/ruff/rules/logging-exc-info/
+    "G202",  # see: https://docs.astral.sh/ruff/rules/logging-redundant-exc-info/
+    "I",     # see: https://docs.astral.sh/ruff/rules/#isort-i
+    "N",     # see: https://docs.astral.sh/ruff/rules/#flake8-quotes-n
+    "PERF",  # see: https://docs.astral.sh/ruff/rules/#perflint-perf
+    "PGH",   # see: https://docs.astral.sh/ruff/rules/#pygrep-hooks-pgh
+    "PIE",   # see: https://docs.astral.sh/ruff/rules/#flake8-pie-pie
+    "PL",    # see: https://docs.astral.sh/ruff/rules/#pyflakes-f
+    "PT",    # see: https://docs.astral.sh/ruff/rules/#flake8-pytest-style-pt
+    "PTH",   # see: https://docs.astral.sh/ruff/rules/#flake8-use-pathlib-pth
+    "PYI",   # see: https://docs.astral.sh/ruff/rules/#flake8-pyi-pyi
+    "Q",     # see: https://docs.astral.sh/ruff/rules/#flake8-quotes-q
+    "RET",   # see: https://docs.astral.sh/ruff/rules/#flake8-return-ret
+    "RSE",   # see: https://docs.astral.sh/ruff/rules/#flake8-raise-rse
+    "RUF",   # see: https://docs.astral.sh/ruff/rules/#ruff-ruf
+    "S",     # see: https://docs.astral.sh/ruff/rules/#flake8-bandit-s
+    "SIM",   # see: https://docs.astral.sh/ruff/rules/#flake8-simplify-sim
+    "SLF",   # see: https://docs.astral.sh/ruff/rules/#flake8-self-slf
+    "SLOT",  # see: https://docs.astral.sh/ruff/rules/#flake8-slots-slot
+    "T10",   # see: https://docs.astral.sh/ruff/rules/#flake8-debugger-t10
+    "T20",   # see: https://docs.astral.sh/ruff/rules/#flake8-typing-t20
+    "TC",    # see: https://docs.astral.sh/ruff/rules/#flake8-type-checking-tc
+    "TRY",   # see: https://docs.astral.sh/ruff/rules/#tryceratops-try
+    "UP",    # see: https://docs.astral.sh/ruff/rules/#pyupgrade-up
+    "W",     # see: https://docs.astral.sh/ruff/rules/#warning-w
+    "YTT",   # see: https://docs.astral.sh/ruff/rules/#flake8-2020-ytt
+]
+ignore = [
+    "DOC501",  # Raised exception {id} missing from docstring
+    "DOC502",  # Raised exception is not explicitly raised
+    "E501",    # Line too long ({width} > {limit})
+    "EXE003",  # Shebang should contain python, pytest, or uv run (doesn't handle global arguments)
+    "S404",    # subprocess possibly insecure - still need to use subprocess though
+    "S603",    # subprocess without shell=True
+    "S606",    # os.exec* without shell - intentional for privilege elevation (safer than with shell)
+    "PLR6301", #
+    "PLR0913",
+    "TRY003",  # Long error messages are fine
+    "T201",    # print() statements are intentional for CI output visibility
+]
+unfixable = ["F401"]
+
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = [
+    "S",    # Security checks not needed in tests
+    "D",    # Docstring requirements relaxed for tests
+    "E501", # Line length relaxed for test data
+    "ANN",  # Type annotations optional for test fixtures/methods
+    "DOC",  # Docstring content requirements relaxed
+    "PLC",  # Local imports acceptable in test helpers
+    "SLF",  # Private name imports acceptable for testing internals
+    "PLR",  # Testing private methods is valid test pattern
+    "EXE",  # Shebang executable check skipped for PEP723 test files
+    "N",    # camelCase in test names acceptable when testing API fields
+    "T",    # print() statements are intentional for CI output visibility
+]
+"typings/**" = ["N", "ANN", "A"]
+"**/scripts/**" = [
+    "T201", # print() statements are intentional for CI output visibility
+]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 120
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+split-on-trailing-comma = false
+force-single-line = false
+force-wrap-aliases = false
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+extra_checks = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+ignore_missing_imports = true
+show_error_codes = true
+pretty = true
+disable_error_code = ["call-arg", "misc"]
+mypy_path = ["packages", "scripts", "."]
+
+[[tool.mypy.overrides]]
+module = ["test.*", "tests.*"]
+disable_error_code = ["attr-defined", "call-arg", "var-annotated"]
+
+[tool.basedpyright]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+reportMissingImports = false
+reportMissingTypeStubs = false
+reportUnnecessaryTypeIgnoreComment = "error"
+reportPrivateImportUsage = false
+reportImplicitRelativeImport = false
+include = ["**/packages", "**/scripts"]
+extraPaths = ["**/packages", "**/scripts", "**/tests"]
+ignore = ["**/typings", "**/tests"]
+
+[tool.pytest.ini_options]
+pythonpath = ["packages"]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = ["-ra", "--strict-markers", "--strict-config", "--showlocals"]
+markers = [
+    "integration: Hardware integration tests requiring physical Pico device",
+    "hardware: Alias for integration marker",
+]
+
+[tool.coverage.run]
+source = ["packages"]
+omit = ["*/tests/*", "*/__pycache__/*", "*/typings/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
+[tool.semantic_release]
+version_toml = []
+major_on_zero = true
+allow_zero_version = true
+tag_format = "v{version}"
+build_command = "uv build"
+
+[tool.semantic_release.branches.main]
+match = "(main|master)"
+prerelease = false
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = [
+    "build",
+    "chore",
+    "ci",
+    "docs",
+    "feat",
+    "fix",
+    "perf",
+    "style",
+    "refactor",
+    "test",
+]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf", "refactor"]
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.35.0",
+    "hatch-vcs>=0.5.0",
+    "hatchling>=1.27.0",
+    "mypy>=1.19.0",
+    "prek>=0.2.20",
+    "ruff>=0.14.8",
+]

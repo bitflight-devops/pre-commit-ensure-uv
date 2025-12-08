@@ -1,0 +1,157 @@
+stages:
+  - lint
+  - test
+  - build
+
+variables:
+  UV_SYSTEM_PYTHON: "1"
+  UV_CACHE_DIR: "$CI_PROJECT_DIR/.uv-cache"
+
+.uv-setup: &uv-setup
+  before_script:
+    - curl -LsSf https://astral.sh/uv/install.sh | sh
+    - export PATH="$HOME/.local/bin:$PATH"
+    - uv --version
+
+# Lint stage
+lint:
+  stage: lint
+  image: python:3.11-slim
+  <<: *uv-setup
+  script:
+    - apt-get update && apt-get install -y curl git
+    - uv sync --frozen
+    - uv run ruff check packages/
+    - uv run ruff format --check packages/
+    - uv run mypy packages/
+  cache:
+    key: uv-lint-$CI_COMMIT_REF_SLUG
+    paths:
+      - .uv-cache/
+      - .venv/
+
+# Linux tests
+test-linux:
+  stage: test
+  image: python:3.11-slim
+  <<: *uv-setup
+  script:
+    - apt-get update && apt-get install -y curl git
+    - uv sync --frozen
+    # Test that the entry point works
+    - uv run ensure-uv
+    # Test hook logic directly
+    - uv run python -c "from ensure_uv import main; print('Import OK')"
+  cache:
+    key: uv-test-linux-$CI_COMMIT_REF_SLUG
+    paths:
+      - .uv-cache/
+      - .venv/
+
+test-linux-py39:
+  stage: test
+  image: python:3.9-slim
+  variables:
+    UV_PYTHON: "3.9"
+  <<: *uv-setup
+  script:
+    - apt-get update && apt-get install -y curl git
+    - uv sync --frozen
+    - uv run ensure-uv
+  cache:
+    key: uv-test-linux-py39-$CI_COMMIT_REF_SLUG
+    paths:
+      - .uv-cache/
+      - .venv/
+
+test-linux-py312:
+  stage: test
+  image: python:3.12-slim
+  variables:
+    UV_PYTHON: "3.12"
+  <<: *uv-setup
+  script:
+    - apt-get update && apt-get install -y curl git
+    - uv sync --frozen
+    - uv run ensure-uv
+  cache:
+    key: uv-test-linux-py312-$CI_COMMIT_REF_SLUG
+    paths:
+      - .uv-cache/
+      - .venv/
+
+# macOS tests
+test-macos:
+  stage: test
+  tags:
+    - macos
+  variables:
+    UV_PYTHON: "3.11"
+  before_script:
+    - curl -LsSf https://astral.sh/uv/install.sh | sh
+    - export PATH="$HOME/.local/bin:$PATH"
+    - uv --version
+  script:
+    - uv sync --frozen
+    - uv run ensure-uv
+    - uv run python -c "from ensure_uv import main; print('Import OK')"
+  cache:
+    key: uv-test-macos-$CI_COMMIT_REF_SLUG
+    paths:
+      - .uv-cache/
+      - .venv/
+  allow_failure: true # macOS runners may not be available
+
+# Windows tests
+test-windows:
+  stage: test
+  tags:
+    - windows
+  variables:
+    UV_PYTHON: "3.11"
+  before_script:
+    - powershell -ExecutionPolicy ByPass -NoProfile -Command "irm https://astral.sh/uv/install.ps1 | iex"
+    - $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
+    - uv --version
+  script:
+    - uv sync --frozen
+    - uv run ensure-uv
+    - uv run python -c "from ensure_uv import main; print('Import OK')"
+  cache:
+    key: uv-test-windows-$CI_COMMIT_REF_SLUG
+    paths:
+      - .uv-cache/
+      - .venv/
+  allow_failure: true # Windows runners may not be available
+
+# Docker integration test
+test-docker:
+  stage: test
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  script:
+    - docker build -t ensure-uv-test -f test/Dockerfile .
+    - docker run --rm ensure-uv-test
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# Build stage
+build:
+  stage: build
+  image: python:3.11-slim
+  <<: *uv-setup
+  script:
+    - apt-get update && apt-get install -y curl git
+    - uv build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+  cache:
+    key: uv-build-$CI_COMMIT_REF_SLUG
+    paths:
+      - .uv-cache/

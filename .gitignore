@@ -1,0 +1,63 @@
+# Python
+**/__pycache__
+*.pyc
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.tox/
+.coverage
+htmlcov/
+coverage.xml
+dist/
+build/
+.gitlab-ci-local/
+# Virtual environments
+.venv*/
+.venv/
+venv/
+!.pre-commit-hooks.yaml
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Build artifacts
+compile_commands.json
+*.tmp/
+tmp-test*/
+test-*-tmp/
+*-test-tmp/
+
+# Test outputs
+test-results/
+.pico_device_db.json
+logs/
+
+# Package lock
+node_modules/
+
+# UV cache
+.uv-cache/
+
+# Environment variables
+.env
+
+# Claude artifacts
+.claude/reports
+.claude/artifacts
+
+# Temporary files
+*.log
+*.bak
+*.orig
+.cache/
+state_reports
+/site/
+.swarm
+.claude-flow
+.memory-bank/
+
+# MkDocs documentation
+/public/
+.mkdocs_cache/

@@ -10,7 +10,7 @@ Add this to your `.pre-commit-config.yaml`:
 
 ```yaml
 repos:
-  - repo: https://github.com/Jamie-BitFlight/pre-commit-ensure-uv
+  - repo: https://github.com/bitflight-devops/pre-commit-ensure-uv
     rev: v0.1.0
     hooks:
       - id: ensure-uv
@@ -20,11 +20,11 @@ Place it **first** in your repos list so uv is available for subsequent hooks.
 
 ## Behavior
 
-| Condition | Action |
-|-----------|--------|
-| uv in PATH | Pass silently |
-| uv installed, not in PATH | Re-run hooks with corrected PATH |
-| uv not installed | Install uv, then re-run with corrected PATH |
+| Condition                 | Action                                      |
+| ------------------------- | ------------------------------------------- |
+| uv in PATH                | Pass silently                               |
+| uv installed, not in PATH | Re-run hooks with corrected PATH            |
+| uv not installed          | Install uv, then re-run with corrected PATH |
 
 When uv needs to be added to PATH, the hook automatically re-runs all hooks with the corrected environment. No shell restart required.
 
