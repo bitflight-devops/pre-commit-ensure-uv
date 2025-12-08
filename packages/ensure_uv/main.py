@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 _RERUN_MARKER = "_ENSURE_UV_RERUN"
+_KNOWN_RUNNERS = ("prek", "pre-commit")
 
 
 def _get_uv_bin_dir() -> Path:
@@ -51,8 +53,117 @@ def _install_uv() -> bool:
     return result.returncode == 0 and _is_uv_installed()
 
 
+def _get_parent_cmdline_linux(ppid: int) -> str | None:
+    """Get parent process command line on Linux via /proc filesystem.
+
+    Args:
+        ppid: Parent process ID.
+
+    Returns:
+        The command line string, or None if unavailable.
+    """
+    try:
+        cmdline = Path(f"/proc/{ppid}/cmdline").read_bytes()
+        return cmdline.replace(b"\x00", b" ").decode("utf-8", errors="replace")
+    except (OSError, PermissionError):
+        return None
+
+
+def _get_parent_cmdline_darwin(ppid: int) -> str | None:
+    """Get parent process command line on macOS via ps command.
+
+    Args:
+        ppid: Parent process ID.
+
+    Returns:
+        The command line string, or None if unavailable.
+    """
+    if not (ps_path := shutil.which("ps")):
+        return None
+    try:
+        result = subprocess.run(
+            [ps_path, "-o", "command=", "-p", str(ppid)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return result.stdout.strip() if result.returncode == 0 else None
+    except OSError:
+        return None
+
+
+def _get_parent_cmdline_win32(ppid: int) -> str | None:
+    """Get parent process command line on Windows via wmic.
+
+    Args:
+        ppid: Parent process ID.
+
+    Returns:
+        The command line string, or None if unavailable.
+    """
+    if not (wmic_path := shutil.which("wmic")):
+        return None
+    try:
+        result = subprocess.run(
+            [wmic_path, "process", "where", f"ProcessId={ppid}", "get", "CommandLine"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            lines = [ln.strip() for ln in result.stdout.splitlines() if ln.strip()]
+            return lines[1] if len(lines) > 1 else None
+    except OSError:
+        pass
+    return None
+
+
+def _get_parent_cmdline() -> str | None:
+    """Get the command line of the parent process.
+
+    Returns:
+        The parent process command line string, or None if unavailable.
+    """
+    ppid = os.getppid()
+    platform_handlers = {
+        "linux": _get_parent_cmdline_linux,
+        "darwin": _get_parent_cmdline_darwin,
+        "win32": _get_parent_cmdline_win32,
+    }
+    handler = platform_handlers.get(sys.platform)
+    return handler(ppid) if handler else None
+
+
+def _detect_runner_from_cmdline(cmdline: str) -> str | None:
+    """Detect prek or pre-commit from a command line string.
+
+    Args:
+        cmdline: The command line string to parse.
+
+    Returns:
+        The detected runner name, or None if not found.
+    """
+    for runner in _KNOWN_RUNNERS:
+        if re.search(rf"\b{re.escape(runner)}\b", cmdline):
+            return runner
+    return None
+
+
 def _get_runner() -> str | None:
-    for runner in ["prek", "pre-commit"]:
+    """Get the runner that invoked this hook.
+
+    First attempts to detect the runner from the parent process command line.
+    Falls back to checking which runners are available in PATH.
+
+    Returns:
+        The runner command name ('prek' or 'pre-commit'), or None if unavailable.
+    """
+    cmdline = _get_parent_cmdline()
+    if cmdline:
+        detected = _detect_runner_from_cmdline(cmdline)
+        if detected and shutil.which(detected):
+            return detected
+    for runner in _KNOWN_RUNNERS:
         if shutil.which(runner):
             return runner
     return None

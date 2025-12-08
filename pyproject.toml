@@ -1,6 +1,6 @@
 
 [project]
-name = "ensure-uv"
+name = "ensure_uv"
 version = "0.1.0"
 description = "Pre-commit hook to ensure uv is installed"
 readme = "README.md"
