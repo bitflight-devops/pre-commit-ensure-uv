@@ -27,7 +27,9 @@ jobs:
 
       - name: Setup test project
         shell: bash
-        run: python "$GITHUB_WORKSPACE/test/setup_test_project.py" --runner both
+        # MSYS_NO_PATHCONV=1 prevents Git Bash from corrupting paths on Windows
+        # when mixing backslash paths (from $GITHUB_WORKSPACE) with forward slashes
+        run: MSYS_NO_PATHCONV=1 python "$GITHUB_WORKSPACE/test/setup_test_project.py" --runner both
 
       - name: Run hooks with prek
         shell: bash
@@ -57,7 +59,9 @@ jobs:
 
       - name: Setup test project
         shell: bash
-        run: python "$GITHUB_WORKSPACE/test/setup_test_project.py" --runner both
+        # MSYS_NO_PATHCONV=1 prevents Git Bash from corrupting paths on Windows
+        # when mixing backslash paths (from $GITHUB_WORKSPACE) with forward slashes
+        run: MSYS_NO_PATHCONV=1 python "$GITHUB_WORKSPACE/test/setup_test_project.py" --runner both
 
       - name: Run hooks with pre-commit
         shell: bash
