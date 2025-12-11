@@ -56,11 +56,26 @@ jobs:
           fi
           echo "First run failed as expected (uv was installed)"
 
-      - name: Add uv to PATH and run again
+      - name: Verify uv was installed
+        shell: bash
+        run: |
+          if [ -f "$HOME/.local/bin/uv" ] || [ -f "$HOME/.local/bin/uv.exe" ]; then
+            echo "uv binary found at ~/.local/bin"
+            ls -la "$HOME/.local/bin/"
+          else
+            echo "ERROR: uv was not installed"
+            exit 1
+          fi
+
+      - name: Clear prek cache and run again with uv in PATH
         working-directory: ${{ runner.temp }}/test-project
         shell: bash
         run: |
+          # Clear hook cache so it picks up new PATH
+          rm -rf ~/.cache/prek/hooks/
           export PATH="$HOME/.local/bin:$PATH"
+          echo "PATH=$PATH"
+          which uv || echo "uv not in which"
           ${{ matrix.venv_bin }}/prek run --all-files
 
   test-pre-commit:
@@ -108,9 +123,24 @@ jobs:
           fi
           echo "First run failed as expected (uv was installed)"
 
-      - name: Add uv to PATH and run again
+      - name: Verify uv was installed
+        shell: bash
+        run: |
+          if [ -f "$HOME/.local/bin/uv" ] || [ -f "$HOME/.local/bin/uv.exe" ]; then
+            echo "uv binary found at ~/.local/bin"
+            ls -la "$HOME/.local/bin/"
+          else
+            echo "ERROR: uv was not installed"
+            exit 1
+          fi
+
+      - name: Clear pre-commit cache and run again with uv in PATH
         working-directory: ${{ runner.temp }}/test-project
         shell: bash
         run: |
+          # Clear hook cache so it picks up new PATH
+          rm -rf ~/.cache/pre-commit/
           export PATH="$HOME/.local/bin:$PATH"
+          echo "PATH=$PATH"
+          which uv || echo "uv not in which"
           ${{ matrix.venv_bin }}/pre-commit run --all-files
