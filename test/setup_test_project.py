@@ -95,10 +95,12 @@ def main() -> None:
     # Determine which runners to install
     runners_to_install = list(RUNNERS) if args.runner == "both" else [args.runner]
 
-    # Create and change to test project directory
-    test_dir = (
-        Path(os.environ.get("RUNNER_TEMP") or Path.home() / "tmp") / "test-project"
-    )
+    # RUNNER_TEMP is set by GitHub Actions (and `act`).
+    # Fallback to ~/tmp for direct local execution.
+    if not os.environ.get("RUNNER_TEMP"):
+        os.environ["RUNNER_TEMP"] = str(Path.home() / "tmp")
+
+    test_dir = Path(os.environ["RUNNER_TEMP"]) / "test-project"
     test_dir.mkdir(parents=True, exist_ok=True)
     os.chdir(test_dir)
 
