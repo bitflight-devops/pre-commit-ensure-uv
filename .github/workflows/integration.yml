@@ -20,13 +20,10 @@ jobs:
         include:
           - os: ubuntu-latest
             venv_bin: .venv/bin
-            uv_bin: ~/.local/bin
           - os: macos-latest
             venv_bin: .venv/bin
-            uv_bin: ~/.local/bin
           - os: windows-latest
             venv_bin: .venv/Scripts
-            uv_bin: ~/.local/bin
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -51,19 +48,20 @@ jobs:
         run: ${{ matrix.venv_bin }}/prek run --all-files
 
       - name: Verify first run failed (expected)
+        shell: bash
         run: |
           if [ "${{ steps.first_run.outcome }}" = "success" ]; then
             echo "ERROR: First run should have failed but succeeded"
             exit 1
           fi
           echo "First run failed as expected (uv was installed)"
-        shell: bash
 
-      - name: Second run - with uv in PATH
+      - name: Add uv to PATH and run again
         working-directory: ${{ runner.temp }}/test-project
-        run: ${{ matrix.venv_bin }}/prek run --all-files
-        env:
-          PATH: ${{ matrix.uv_bin }}:${{ env.PATH }}
+        shell: bash
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          ${{ matrix.venv_bin }}/prek run --all-files
 
   test-pre-commit:
     name: pre-commit - ${{ matrix.os }}
@@ -74,13 +72,10 @@ jobs:
         include:
           - os: ubuntu-latest
             venv_bin: .venv/bin
-            uv_bin: ~/.local/bin
           - os: macos-latest
             venv_bin: .venv/bin
-            uv_bin: ~/.local/bin
           - os: windows-latest
             venv_bin: .venv/Scripts
-            uv_bin: ~/.local/bin
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -105,16 +100,17 @@ jobs:
         run: ${{ matrix.venv_bin }}/pre-commit run --all-files
 
       - name: Verify first run failed (expected)
+        shell: bash
         run: |
           if [ "${{ steps.first_run.outcome }}" = "success" ]; then
             echo "ERROR: First run should have failed but succeeded"
             exit 1
           fi
           echo "First run failed as expected (uv was installed)"
-        shell: bash
 
-      - name: Second run - with uv in PATH
+      - name: Add uv to PATH and run again
         working-directory: ${{ runner.temp }}/test-project
-        run: ${{ matrix.venv_bin }}/pre-commit run --all-files
-        env:
-          PATH: ${{ matrix.uv_bin }}:${{ env.PATH }}
+        shell: bash
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          ${{ matrix.venv_bin }}/pre-commit run --all-files
