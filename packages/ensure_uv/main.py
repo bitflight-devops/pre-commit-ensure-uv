@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -85,119 +84,123 @@ def _install_uv() -> bool:
     return True
 
 
-def _get_parent_cmdline_linux(ppid: int) -> str | None:
-    """Get parent process command line on Linux via /proc filesystem.
+def _get_parent_exe_linux(ppid: int) -> str | None:
+    """Get parent process executable path on Linux via /proc filesystem.
 
     Args:
         ppid: Parent process ID.
 
     Returns:
-        The command line string, or None if unavailable.
+        The executable path, or None if unavailable.
     """
     try:
-        cmdline = Path(f"/proc/{ppid}/cmdline").read_bytes()
-        return cmdline.replace(b"\x00", b" ").decode("utf-8", errors="replace")
+        exe_link = Path(f"/proc/{ppid}/exe")
+        if exe_link.exists():
+            return str(exe_link.resolve())
     except (OSError, PermissionError):
-        return None
+        pass
+    return None
 
 
-def _get_parent_cmdline_darwin(ppid: int) -> str | None:
-    """Get parent process command line on macOS via ps command.
+def _get_parent_exe_darwin(ppid: int) -> str | None:
+    """Get parent process executable path on macOS via lsof command.
 
     Args:
         ppid: Parent process ID.
 
     Returns:
-        The command line string, or None if unavailable.
+        The executable path, or None if unavailable.
     """
-    if not (ps_path := shutil.which("ps")):
+    if not (lsof_path := shutil.which("lsof")):
         return None
     try:
+        # lsof -p PID -Fn shows the executable path as 'n/path/to/exe'
         result = subprocess.run(
-            [ps_path, "-o", "command=", "-p", str(ppid)],
+            [lsof_path, "-p", str(ppid), "-Fn"],
             capture_output=True,
             text=True,
             check=False,
         )
-        return result.stdout.strip() if result.returncode == 0 else None
+        if result.returncode == 0:
+            for line in result.stdout.splitlines():
+                if line.startswith("n") and ("prek" in line or "pre-commit" in line):
+                    return line[1:]  # Strip 'n' prefix
     except OSError:
-        return None
+        pass
+    return None
 
 
-def _get_parent_cmdline_win32(ppid: int) -> str | None:
-    """Get parent process command line on Windows via wmic.
+def _get_parent_exe_win32(ppid: int) -> str | None:
+    """Get parent process executable path on Windows via wmic.
 
     Args:
         ppid: Parent process ID.
 
     Returns:
-        The command line string, or None if unavailable.
+        The executable path, or None if unavailable.
     """
     if not (wmic_path := shutil.which("wmic")):
         return None
     try:
         result = subprocess.run(
-            [wmic_path, "process", "where", f"ProcessId={ppid}", "get", "CommandLine"],
+            [
+                wmic_path,
+                "process",
+                "where",
+                f"ProcessId={ppid}",
+                "get",
+                "ExecutablePath",
+            ],
             capture_output=True,
             text=True,
             check=False,
         )
         if result.returncode == 0:
             lines = [ln.strip() for ln in result.stdout.splitlines() if ln.strip()]
-            return lines[1] if len(lines) > 1 else None
+            if len(lines) > 1 and lines[1]:
+                return lines[1]
     except OSError:
         pass
     return None
 
 
-def _get_parent_cmdline() -> str | None:
-    """Get the command line of the parent process.
+def _get_parent_exe() -> str | None:
+    """Get the executable path of the parent process.
 
     Returns:
-        The parent process command line string, or None if unavailable.
+        The parent process executable path, or None if unavailable.
     """
     ppid = os.getppid()
     platform_handlers = {
-        "linux": _get_parent_cmdline_linux,
-        "darwin": _get_parent_cmdline_darwin,
-        "win32": _get_parent_cmdline_win32,
+        "linux": _get_parent_exe_linux,
+        "darwin": _get_parent_exe_darwin,
+        "win32": _get_parent_exe_win32,
     }
     handler = platform_handlers.get(sys.platform)
     return handler(ppid) if handler else None
 
 
-def _detect_runner_from_cmdline(cmdline: str) -> str | None:
-    """Detect prek or pre-commit from a command line string.
-
-    Args:
-        cmdline: The command line string to parse.
-
-    Returns:
-        The detected runner name, or None if not found.
-    """
-    for runner in _KNOWN_RUNNERS:
-        if re.search(rf"\b{re.escape(runner)}\b", cmdline):
-            return runner
-    return None
-
-
 def _get_runner() -> str | None:
-    """Get the runner that invoked this hook.
+    """Get the full path to the runner that invoked this hook.
 
-    First attempts to detect the runner from the parent process command line.
+    First attempts to get the parent process executable path directly.
     Falls back to checking which runners are available in PATH.
 
     Returns:
-        The runner command name ('prek' or 'pre-commit'), or None if unavailable.
+        The full path to the runner executable, or None if unavailable.
     """
-    cmdline = _get_parent_cmdline()
-    if cmdline:
-        detected = _detect_runner_from_cmdline(cmdline)
-        if detected and shutil.which(detected):
-            return detected
+    # Try to get parent executable path directly (works even in isolated venvs)
+    parent_exe = _get_parent_exe()
+    if parent_exe:
+        # Verify it's a known runner
+        for runner in _KNOWN_RUNNERS:
+            if runner in parent_exe:
+                return parent_exe
+
+    # Fallback to PATH lookup (may not work in isolated venvs)
     for runner in _KNOWN_RUNNERS:
-        if shutil.which(runner):
-            return runner
+        if path := shutil.which(runner):
+            return path
     return None
 
 
@@ -208,8 +211,8 @@ def _rerun_with_uv() -> int:
         Exit code from the runner subprocess.
     """
     # Debug parent process detection
-    cmdline = _get_parent_cmdline()
-    print(f"[ensure-uv] parent cmdline: {cmdline}")
+    parent_exe = _get_parent_exe()
+    print(f"[ensure-uv] parent exe: {parent_exe}")
 
     runner = _get_runner()
     if not runner:
