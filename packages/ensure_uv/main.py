@@ -207,6 +207,10 @@ def _rerun_with_uv() -> int:
     Returns:
         Exit code from the runner subprocess.
     """
+    # Debug parent process detection
+    cmdline = _get_parent_cmdline()
+    print(f"[ensure-uv] parent cmdline: {cmdline}")
+
     runner = _get_runner()
     if not runner:
         print("[ensure-uv] _get_runner() returned None - can't re-run")
