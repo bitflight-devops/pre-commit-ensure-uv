@@ -170,11 +170,28 @@ def _get_runner() -> str | None:
 
 
 def _rerun_with_uv() -> int:
+    """Re-run hooks with uv's bin directory prepended to PATH.
+
+    Returns:
+        Exit code from the runner subprocess.
+    """
     runner = _get_runner()
     if not runner:
         return 1
+
     env = os.environ.copy()
-    env["PATH"] = f"{_get_uv_bin_dir()}{os.pathsep}{env.get('PATH', '')}"
+    uv_bin = str(_get_uv_bin_dir())
+    current_path = os.environ.get("PATH", "")
+
+    # On Windows, env var names are case-insensitive but os.environ.copy()
+    # creates a case-sensitive dict. Remove any existing PATH/Path keys
+    # to avoid duplicates when we set the new value.
+    if sys.platform == "win32":
+        for key in list(env.keys()):
+            if key.upper() == "PATH":
+                del env[key]
+
+    env["PATH"] = f"{uv_bin}{os.pathsep}{current_path}"
     env[_RERUN_MARKER] = "1"
     result = subprocess.run([runner, "run", "--all-files"], env=env, check=False)
     return result.returncode
