@@ -229,7 +229,14 @@ def main() -> int:
     Returns:
         Exit code (0 for success, non-zero for failure).
     """
-    if os.environ.get(_RERUN_MARKER):
+    # Debug: always show state at entry
+    marker = os.environ.get(_RERUN_MARKER)
+    in_path = _is_uv_in_path()
+    print(
+        f"[ensure-uv] marker={marker!r} in_path={in_path} path={os.environ.get('PATH', '')[:100]}"
+    )
+
+    if marker:
         if _is_uv_in_path():
             return 0
         # Debug: show why uv not found in re-run
