@@ -17,31 +17,39 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            venv_bin: .venv/bin
+          - os: macos-latest
+            venv_bin: .venv/bin
+          - os: windows-latest
+            venv_bin: .venv/Scripts
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
       - name: Verify uv is NOT installed
-        shell: bash
         run: python -c "import shutil, sys; sys.exit(0 if shutil.which('uv') is None else 1)"
 
       - name: Setup test project
-        shell: bash
+        env:
+          MSYS_NO_PATHCONV: 1
         # MSYS_NO_PATHCONV=1 prevents Git Bash from corrupting paths on Windows
         # when mixing backslash paths (from $GITHUB_WORKSPACE) with forward slashes
-        run: MSYS_NO_PATHCONV=1 python "$GITHUB_WORKSPACE/test/setup_test_project.py" --runner both
+        # SETUP_TEST_PROJECT
+        # 1. Creates test directory at $RUNNER_TEMP/test-project (or ~/tmp/test-project)
+        # 2. Creates a virtual environment at .venv using Python's venv module
+        # 3. Installs runners (prek, pre-commit, or both) into the venv via pip
+        # 4. Verifies the runner executables exist in the venv
+        # 5. Initializes git repo with git init and sets user config
+        # 6. Creates .pre-commit-config.yaml pointing to the hook being tested
+        # 7. Creates a dummy test.txt file
+        # 8. Stages files with git add .
+        run: python "${{ github.workspace }}/test/setup_test_project.py" --runner both
 
       - name: Run hooks with prek
-        shell: bash
         working-directory: ${{ runner.temp }}/test-project
-        run: |
-          # Activate venv and run with prek
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            source .venv/Scripts/activate
-          else
-            source .venv/bin/activate
-          fi
-          prek run --all-files
+        run: ${{ matrix.venv_bin }}/prek run --all-files
 
   test-pre-commit:
     name: pre-commit - ${{ matrix.os }}
@@ -49,28 +57,36 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            venv_bin: .venv/bin
+          - os: macos-latest
+            venv_bin: .venv/bin
+          - os: windows-latest
+            venv_bin: .venv/Scripts
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
       - name: Verify uv is NOT installed
-        shell: bash
         run: python -c "import shutil, sys; sys.exit(0 if shutil.which('uv') is None else 1)"
 
       - name: Setup test project
-        shell: bash
+        env:
+          MSYS_NO_PATHCONV: 1
         # MSYS_NO_PATHCONV=1 prevents Git Bash from corrupting paths on Windows
         # when mixing backslash paths (from $GITHUB_WORKSPACE) with forward slashes
-        run: MSYS_NO_PATHCONV=1 python "$GITHUB_WORKSPACE/test/setup_test_project.py" --runner both
+        # SETUP_TEST_PROJECT
+        # 1. Creates test directory at $RUNNER_TEMP/test-project (or ~/tmp/test-project)
+        # 2. Creates a virtual environment at .venv using Python's venv module
+        # 3. Installs runners (prek, pre-commit, or both) into the venv via pip
+        # 4. Verifies the runner executables exist in the venv
+        # 5. Initializes git repo with git init and sets user config
+        # 6. Creates .pre-commit-config.yaml pointing to the hook being tested
+        # 7. Creates a dummy test.txt file
+        # 8. Stages files with git add .
+        run: python "${{ github.workspace }}/test/setup_test_project.py" --runner both
 
       - name: Run hooks with pre-commit
-        shell: bash
         working-directory: ${{ runner.temp }}/test-project
-        run: |
-          # Activate venv and run with pre-commit
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            source .venv/Scripts/activate
-          else
-            source .venv/bin/activate
-          fi
-          pre-commit run --all-files
+        run: ${{ matrix.venv_bin }}/pre-commit run --all-files
