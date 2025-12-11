@@ -84,17 +84,17 @@ def _install_uv() -> bool:
     return True
 
 
-def _get_parent_exe_linux(ppid: int) -> str | None:
-    """Get parent process executable path on Linux via /proc filesystem.
+def _get_exe_linux(pid: int) -> str | None:
+    """Get process executable path on Linux via /proc filesystem.
 
     Args:
-        ppid: Parent process ID.
+        pid: Process ID.
 
     Returns:
         The executable path, or None if unavailable.
     """
     try:
-        exe_link = Path(f"/proc/{ppid}/exe")
+        exe_link = Path(f"/proc/{pid}/exe")
         if exe_link.exists():
             return str(exe_link.resolve())
     except (OSError, PermissionError):
@@ -102,11 +102,39 @@ def _get_parent_exe_linux(ppid: int) -> str | None:
     return None
 
 
-def _get_parent_exe_darwin(ppid: int) -> str | None:
-    """Get parent process executable path on macOS via lsof command.
+def _get_ppid_linux(pid: int) -> int | None:
+    """Get parent process ID on Linux via /proc filesystem.
 
     Args:
-        ppid: Parent process ID.
+        pid: Process ID.
+
+    Returns:
+        The parent process ID, or None if unavailable.
+    """
+    # /proc/PID/stat format: "pid (comm) state ppid ..."
+    # After the closing paren, fields are: state(0), ppid(1), pgrp(2), ...
+    ppid_field_index = 1
+    try:
+        stat_file = Path(f"/proc/{pid}/stat")
+        if stat_file.exists():
+            content = stat_file.read_text(encoding="utf-8")
+            # Find the closing paren to skip comm field (may contain spaces)
+            paren_idx = content.rfind(")")
+            if paren_idx != -1:
+                # Skip ") " to get to the fields after comm
+                fields = content[paren_idx + 2 :].split()
+                if len(fields) > ppid_field_index:
+                    return int(fields[ppid_field_index])
+    except (OSError, PermissionError, ValueError):
+        pass
+    return None
+
+
+def _get_exe_darwin(pid: int) -> str | None:
+    """Get process executable path on macOS via lsof command.
+
+    Args:
+        pid: Process ID.
 
     Returns:
         The executable path, or None if unavailable.
@@ -116,25 +144,51 @@ def _get_parent_exe_darwin(ppid: int) -> str | None:
     try:
         # lsof -p PID -Fn shows the executable path as 'n/path/to/exe'
         result = subprocess.run(
-            [lsof_path, "-p", str(ppid), "-Fn"],
+            [lsof_path, "-p", str(pid), "-Fn"],
             capture_output=True,
             text=True,
             check=False,
         )
         if result.returncode == 0:
             for line in result.stdout.splitlines():
-                if line.startswith("n") and ("prek" in line or "pre-commit" in line):
+                # First 'n' line with 'txt' type is the executable
+                if line.startswith("n/"):
                     return line[1:]  # Strip 'n' prefix
     except OSError:
         pass
     return None
 
 
-def _get_parent_exe_win32(ppid: int) -> str | None:
-    """Get parent process executable path on Windows via wmic.
+def _get_ppid_darwin(pid: int) -> int | None:
+    """Get parent process ID on macOS via ps command.
 
     Args:
-        ppid: Parent process ID.
+        pid: Process ID.
+
+    Returns:
+        The parent process ID, or None if unavailable.
+    """
+    if not (ps_path := shutil.which("ps")):
+        return None
+    try:
+        result = subprocess.run(
+            [ps_path, "-o", "ppid=", "-p", str(pid)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            return int(result.stdout.strip())
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def _get_exe_win32(pid: int) -> str | None:
+    """Get process executable path on Windows via wmic.
+
+    Args:
+        pid: Process ID.
 
     Returns:
         The executable path, or None if unavailable.
@@ -147,7 +201,7 @@ def _get_parent_exe_win32(ppid: int) -> str | None:
                 wmic_path,
                 "process",
                 "where",
-                f"ProcessId={ppid}",
+                f"ProcessId={pid}",
                 "get",
                 "ExecutablePath",
             ],
@@ -164,38 +218,101 @@ def _get_parent_exe_win32(ppid: int) -> str | None:
     return None
 
 
-def _get_parent_exe() -> str | None:
-    """Get the executable path of the parent process.
+def _get_ppid_win32(pid: int) -> int | None:
+    """Get parent process ID on Windows via wmic.
+
+    Args:
+        pid: Process ID.
 
     Returns:
-        The parent process executable path, or None if unavailable.
+        The parent process ID, or None if unavailable.
     """
-    ppid = os.getppid()
-    platform_handlers = {
-        "linux": _get_parent_exe_linux,
-        "darwin": _get_parent_exe_darwin,
-        "win32": _get_parent_exe_win32,
+    if not (wmic_path := shutil.which("wmic")):
+        return None
+    try:
+        result = subprocess.run(
+            [
+                wmic_path,
+                "process",
+                "where",
+                f"ProcessId={pid}",
+                "get",
+                "ParentProcessId",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            lines = [ln.strip() for ln in result.stdout.splitlines() if ln.strip()]
+            if len(lines) > 1 and lines[1]:
+                return int(lines[1])
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def _find_runner_in_ancestors() -> str | None:
+    """Walk up the process tree to find a known runner executable.
+
+    Pre-commit/prek run hooks in isolated Python environments, so the immediate
+    parent is typically 'python'. We need to walk up the tree to find the
+    actual runner (prek or pre-commit).
+
+    Returns:
+        The full path to the runner executable, or None if not found.
+    """
+    # Platform-specific functions for getting exe path and parent PID
+    exe_funcs = {
+        "linux": _get_exe_linux,
+        "darwin": _get_exe_darwin,
+        "win32": _get_exe_win32,
     }
-    handler = platform_handlers.get(sys.platform)
-    return handler(ppid) if handler else None
+    ppid_funcs = {
+        "linux": _get_ppid_linux,
+        "darwin": _get_ppid_darwin,
+        "win32": _get_ppid_win32,
+    }
+
+    get_exe = exe_funcs.get(sys.platform)
+    get_ppid = ppid_funcs.get(sys.platform)
+    if not get_exe or not get_ppid:
+        return None
+
+    # Walk up process tree (limit iterations to avoid infinite loops)
+    max_depth = 10
+    pid: int | None = os.getppid()
+
+    for _ in range(max_depth):
+        if pid is None or pid <= 1:
+            break
+
+        exe_path = get_exe(pid)
+        if exe_path:
+            # Check if this is a known runner
+            for runner in _KNOWN_RUNNERS:
+                if runner in exe_path:
+                    return exe_path
+
+        # Move to parent
+        pid = get_ppid(pid)
+
+    return None
 
 
 def _get_runner() -> str | None:
     """Get the full path to the runner that invoked this hook.
 
-    First attempts to get the parent process executable path directly.
+    First walks up the process tree to find the runner executable directly.
     Falls back to checking which runners are available in PATH.
 
     Returns:
         The full path to the runner executable, or None if unavailable.
     """
-    # Try to get parent executable path directly (works even in isolated venvs)
-    parent_exe = _get_parent_exe()
-    if parent_exe:
-        # Verify it's a known runner
-        for runner in _KNOWN_RUNNERS:
-            if runner in parent_exe:
-                return parent_exe
+    # Walk up process tree to find runner (works even in isolated venvs)
+    runner_path = _find_runner_in_ancestors()
+    if runner_path:
+        return runner_path
 
     # Fallback to PATH lookup (may not work in isolated venvs)
     for runner in _KNOWN_RUNNERS:
@@ -210,10 +327,6 @@ def _rerun_with_uv() -> int:
     Returns:
         Exit code from the runner subprocess.
     """
-    # Debug parent process detection
-    parent_exe = _get_parent_exe()
-    print(f"[ensure-uv] parent exe: {parent_exe}")
-
     runner = _get_runner()
     if not runner:
         print("[ensure-uv] _get_runner() returned None - can't re-run")
