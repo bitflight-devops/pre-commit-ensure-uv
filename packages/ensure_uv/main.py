@@ -54,14 +54,21 @@ def _install_uv() -> bool:
     print("Installing uv...")
 
     if sys.platform == "win32":
+        # Use PowerShell with explicit Import-Module to work around module loading issues
+        # in constrained environments like pre-commit hooks
+        ps_script = (
+            "Import-Module Microsoft.PowerShell.Security -ErrorAction SilentlyContinue; "
+            "$ProgressPreference='SilentlyContinue'; "
+            "irm https://astral.sh/uv/install.ps1 | iex"
+        )
         cmd = [
             "powershell",
             "-ExecutionPolicy",
-            "ByPass",
+            "Bypass",
             "-NoProfile",
             "-NonInteractive",
             "-Command",
-            "$ProgressPreference='SilentlyContinue';irm https://astral.sh/uv/install.ps1|iex",
+            ps_script,
         ]
     else:
         cmd = [
