@@ -57,9 +57,15 @@ def _install_uv() -> bool:
 
     if result.returncode != 0:
         print(f"uv installer failed (exit {result.returncode})", file=sys.stderr)
+        if result.stdout:
+            print(f"stdout: {result.stdout.strip()}", file=sys.stderr)
         if result.stderr:
             print(f"stderr: {result.stderr.strip()}", file=sys.stderr)
         return False
+
+    # Show installer output even on success to see where it installed
+    if result.stdout:
+        print(f"installer stdout: {result.stdout.strip()}")
 
     uv_path = _get_uv_path()
     if not uv_path.exists():
