@@ -53,29 +53,8 @@ def _install_uv() -> bool:
     """
     print("Installing uv...")
 
-    if sys.platform == "win32":
-        # Use PowerShell with explicit Import-Module to work around module loading issues
-        # in constrained environments like pre-commit hooks
-        ps_script = (
-            "Import-Module Microsoft.PowerShell.Security -ErrorAction SilentlyContinue; "
-            "$ProgressPreference='SilentlyContinue'; "
-            "irm https://astral.sh/uv/install.ps1 | iex"
-        )
-        cmd = [
-            "powershell",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-NoProfile",
-            "-NonInteractive",
-            "-Command",
-            ps_script,
-        ]
-    else:
-        cmd = [
-            "sh",
-            "-c",
-            "curl -LsSf https://astral.sh/uv/install.sh | sh -s -- --quiet",
-        ]
+    # Use sh/curl for all platforms - Git Bash provides these on Windows
+    cmd = ["sh", "-c", "curl -LsSf https://astral.sh/uv/install.sh | sh -s -- --quiet"]
 
     result = subprocess.run(cmd, check=False, capture_output=True, text=True)
 
