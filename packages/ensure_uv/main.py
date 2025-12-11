@@ -230,7 +230,19 @@ def main() -> int:
         Exit code (0 for success, non-zero for failure).
     """
     if os.environ.get(_RERUN_MARKER):
-        return 0 if _is_uv_in_path() else 1
+        if _is_uv_in_path():
+            return 0
+        # Debug: show why uv not found in re-run
+        _get_uv_bin_dir()
+        uv_path = _get_uv_path()
+        print("Re-run check failed: uv not in PATH", file=sys.stderr)
+        print(f"Expected uv at: {uv_path}", file=sys.stderr)
+        print(f"File exists: {uv_path.exists()}", file=sys.stderr)
+        print(
+            f"PATH dirs: {os.environ.get('PATH', '').split(os.pathsep)[:5]}",
+            file=sys.stderr,
+        )
+        return 1
 
     if _is_uv_in_path():
         return 0
