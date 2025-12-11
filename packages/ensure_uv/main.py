@@ -283,11 +283,14 @@ def _find_runner_in_ancestors() -> str | None:
     max_depth = 10
     pid: int | None = os.getppid()
 
-    for _ in range(max_depth):
+    print(f"[ensure-uv] walking process tree from pid={pid}")
+    for depth in range(max_depth):
         if pid is None or pid <= 1:
+            print(f"[ensure-uv] depth={depth} pid={pid} - stopping")
             break
 
         exe_path = get_exe(pid)
+        print(f"[ensure-uv] depth={depth} pid={pid} exe={exe_path}")
         if exe_path:
             # Check if this is a known runner
             for runner in _KNOWN_RUNNERS:
