@@ -20,10 +20,13 @@ jobs:
         include:
           - os: ubuntu-latest
             venv_bin: .venv/bin
+            uv_bin: ~/.local/bin
           - os: macos-latest
             venv_bin: .venv/bin
+            uv_bin: ~/.local/bin
           - os: windows-latest
             venv_bin: .venv/Scripts
+            uv_bin: ~/.local/bin
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -34,22 +37,33 @@ jobs:
       - name: Setup test project
         env:
           MSYS_NO_PATHCONV: 1
-        # MSYS_NO_PATHCONV=1 prevents Git Bash from corrupting paths on Windows
-        # when mixing backslash paths (from $GITHUB_WORKSPACE) with forward slashes
         # SETUP_TEST_PROJECT
-        # 1. Creates test directory at $RUNNER_TEMP/test-project (or ~/tmp/test-project)
-        # 2. Creates a virtual environment at .venv using Python's venv module
-        # 3. Installs runners (prek, pre-commit, or both) into the venv via pip
-        # 4. Verifies the runner executables exist in the venv
-        # 5. Initializes git repo with git init and sets user config
-        # 6. Creates .pre-commit-config.yaml pointing to the hook being tested
-        # 7. Creates a dummy test.txt file
-        # 8. Stages files with git add .
+        # 1. Creates test directory at $RUNNER_TEMP/test-project
+        # 2. Creates a virtual environment at .venv
+        # 3. Installs runners (prek, pre-commit) into the venv
+        # 4. Initializes git repo and creates .pre-commit-config.yaml
         run: python "${{ github.workspace }}/test/setup_test_project.py" --runner both
 
-      - name: Run hooks with prek
+      - name: First run - installs uv and fails
+        id: first_run
+        continue-on-error: true
         working-directory: ${{ runner.temp }}/test-project
         run: ${{ matrix.venv_bin }}/prek run --all-files
+
+      - name: Verify first run failed (expected)
+        run: |
+          if [ "${{ steps.first_run.outcome }}" = "success" ]; then
+            echo "ERROR: First run should have failed but succeeded"
+            exit 1
+          fi
+          echo "First run failed as expected (uv was installed)"
+        shell: bash
+
+      - name: Second run - with uv in PATH
+        working-directory: ${{ runner.temp }}/test-project
+        run: ${{ matrix.venv_bin }}/prek run --all-files
+        env:
+          PATH: ${{ matrix.uv_bin }}:${{ env.PATH }}
 
   test-pre-commit:
     name: pre-commit - ${{ matrix.os }}
@@ -60,10 +74,13 @@ jobs:
         include:
           - os: ubuntu-latest
             venv_bin: .venv/bin
+            uv_bin: ~/.local/bin
           - os: macos-latest
             venv_bin: .venv/bin
+            uv_bin: ~/.local/bin
           - os: windows-latest
             venv_bin: .venv/Scripts
+            uv_bin: ~/.local/bin
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -74,19 +91,30 @@ jobs:
       - name: Setup test project
         env:
           MSYS_NO_PATHCONV: 1
-        # MSYS_NO_PATHCONV=1 prevents Git Bash from corrupting paths on Windows
-        # when mixing backslash paths (from $GITHUB_WORKSPACE) with forward slashes
         # SETUP_TEST_PROJECT
-        # 1. Creates test directory at $RUNNER_TEMP/test-project (or ~/tmp/test-project)
-        # 2. Creates a virtual environment at .venv using Python's venv module
-        # 3. Installs runners (prek, pre-commit, or both) into the venv via pip
-        # 4. Verifies the runner executables exist in the venv
-        # 5. Initializes git repo with git init and sets user config
-        # 6. Creates .pre-commit-config.yaml pointing to the hook being tested
-        # 7. Creates a dummy test.txt file
-        # 8. Stages files with git add .
+        # 1. Creates test directory at $RUNNER_TEMP/test-project
+        # 2. Creates a virtual environment at .venv
+        # 3. Installs runners (prek, pre-commit) into the venv
+        # 4. Initializes git repo and creates .pre-commit-config.yaml
         run: python "${{ github.workspace }}/test/setup_test_project.py" --runner both
 
-      - name: Run hooks with pre-commit
+      - name: First run - installs uv and fails
+        id: first_run
+        continue-on-error: true
         working-directory: ${{ runner.temp }}/test-project
         run: ${{ matrix.venv_bin }}/pre-commit run --all-files
+
+      - name: Verify first run failed (expected)
+        run: |
+          if [ "${{ steps.first_run.outcome }}" = "success" ]; then
+            echo "ERROR: First run should have failed but succeeded"
+            exit 1
+          fi
+          echo "First run failed as expected (uv was installed)"
+        shell: bash
+
+      - name: Second run - with uv in PATH
+        working-directory: ${{ runner.temp }}/test-project
+        run: ${{ matrix.venv_bin }}/pre-commit run --all-files
+        env:
+          PATH: ${{ matrix.uv_bin }}:${{ env.PATH }}
