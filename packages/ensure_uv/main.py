@@ -260,11 +260,17 @@ def main() -> int:
     if _is_uv_in_path():
         return 0
 
-    if not _is_uv_installed() and not _install_uv():
+    installed = _is_uv_installed()
+    print(f"[ensure-uv] uv_installed={installed} uv_path={_get_uv_path()}")
+
+    if not installed and not _install_uv():
         print("Failed to install uv.", file=sys.stderr)
         return 1
 
-    sys.exit(_rerun_with_uv())
+    print("[ensure-uv] triggering re-run with uv in PATH")
+    rc = _rerun_with_uv()
+    print(f"[ensure-uv] re-run returned {rc}")
+    sys.exit(rc)
 
 
 if __name__ == "__main__":
