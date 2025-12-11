@@ -209,7 +209,10 @@ def _rerun_with_uv() -> int:
     """
     runner = _get_runner()
     if not runner:
+        print("[ensure-uv] _get_runner() returned None - can't re-run")
+        print(f"[ensure-uv] PATH in hook: {os.environ.get('PATH', '')[:200]}")
         return 1
+    print(f"[ensure-uv] found runner: {runner}")
 
     env = os.environ.copy()
     uv_bin = str(_get_uv_bin_dir())
