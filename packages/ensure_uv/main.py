@@ -31,6 +31,11 @@ def _is_uv_installed() -> bool:
 
 
 def _install_uv() -> bool:
+    """Install uv using the official installer script.
+
+    Returns:
+        True if installation succeeded and uv is found at expected path.
+    """
     if sys.platform == "win32":
         cmd = [
             "powershell",
@@ -47,10 +52,31 @@ def _install_uv() -> bool:
             "-c",
             "curl -LsSf https://astral.sh/uv/install.sh | sh -s -- --quiet",
         ]
-    result = subprocess.run(
-        cmd, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-    )
-    return result.returncode == 0 and _is_uv_installed()
+
+    result = subprocess.run(cmd, check=False, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        print(f"uv installer failed (exit {result.returncode})", file=sys.stderr)
+        if result.stderr:
+            print(f"stderr: {result.stderr.strip()}", file=sys.stderr)
+        return False
+
+    uv_path = _get_uv_path()
+    if not uv_path.exists():
+        print(f"uv not found at expected path: {uv_path}", file=sys.stderr)
+        # Check common alternative locations
+        alt_locations = [
+            Path.home()
+            / ".cargo"
+            / "bin"
+            / f"uv{'.exe' if sys.platform == 'win32' else ''}"
+        ]
+        for alt in alt_locations:
+            if alt.exists():
+                print(f"uv found at alternative path: {alt}", file=sys.stderr)
+        return False
+
+    return True
 
 
 def _get_parent_cmdline_linux(ppid: int) -> str | None:
