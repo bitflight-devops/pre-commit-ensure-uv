@@ -62,7 +62,7 @@ jobs:
         run: uv sync
 
       - name: Lint code
-        run: uv run ruff check --output-format=github packages/
+        run: uv run ruff check --no-fix --output-format=github packages/
         continue-on-error: false
 
   typecheck:

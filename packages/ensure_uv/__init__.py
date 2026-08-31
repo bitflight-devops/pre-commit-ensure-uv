@@ -1,5 +1,7 @@
 """Pre-commit hook to ensure uv is installed and available."""
 
+from __future__ import annotations
+
 from .main import main
 from .version import __version__
 
