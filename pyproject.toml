@@ -52,7 +52,6 @@ testpaths = ["tests"]
 include = ["packages"]
 
 [tool.ruff]
-fix = true
 src = [".github", ".gitlab", "packages", "scripts", "tests", "typings"]
 target-version = "py311"
 unsafe-fixes = true
