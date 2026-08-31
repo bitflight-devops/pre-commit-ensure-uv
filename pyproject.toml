@@ -25,7 +25,7 @@ dev = [
     "hatch-vcs>=0.5.0",
     "hatchling>=1.27.0",
     "prek>=0.2.20",
-    "ruff>=0.14.8",
+    "ruff==0.14.8",
     "toml-sort>=0.24.3",
     "ty>=0.0.75",
     "uv-sort>=0.6.1",
