@@ -94,9 +94,9 @@ repos:
   # Local hooks for type checking
   - repo: local
     hooks:
-      - id: mypy
-        name: mypy
-        entry: uv run -q --no-sync --with pep723-loader --with mypy pep723-loader mypy
+      - id: ty
+        name: ty check
+        entry: uv run -q ty check
         language: system
         types: [python]
         pass_filenames: true
