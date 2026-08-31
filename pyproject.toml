@@ -118,6 +118,12 @@ ignore = [
     "S603", # subprocess without shell=True
     "S606", # os.exec* without shell - intentional for privilege elevation (safer than with shell)
     "T201", # print() statements are intentional for CI output visibility
+    # TC001-TC003 conflict with lint.isort.required-imports below: moving
+    # annotation-only imports into TYPE_CHECKING raises NameError on Python
+    # 3.10-3.13 for anything that resolves annotations at runtime.
+    "TC001", # Move application import into a type-checking block
+    "TC002", # Move third-party import into a type-checking block
+    "TC003", # Move standard library import into a type-checking block
     "TRY003", # Long error messages are fine
 ]
 preview = true
