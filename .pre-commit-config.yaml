@@ -14,7 +14,7 @@ default_stages:
 
 repos:
   - repo: https://github.com/mxr/sync-pre-commit-deps
-    rev: v0.0.3
+    rev: v0.0.5
     hooks:
       - id: sync-pre-commit-deps
 
@@ -53,7 +53,7 @@ repos:
 
   # Python formatting and linting
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.4
+    rev: v0.16.5
     hooks:
       - id: ruff
         name: Lint Python with ruff
@@ -61,13 +61,13 @@ repos:
       - id: ruff-format
         name: Format Python with ruff
   - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.19.1
+    rev: v0.23.2
     hooks:
       - id: markdownlint-cli2
 
   # YAML/JSON formatting
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.1.0
+    rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
         name: Format YAML, JSON, and Markdown files
@@ -87,7 +87,7 @@ repos:
           - -ci
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.11.0.1
+    rev: v0.11.0.1-1
     hooks:
       - id: shellcheck
 
